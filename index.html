@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Calculator</title>
+<style>
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea { -webkit-user-select: text; user-select: text; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #1c1c1e;
+  overflow: hidden;
+  position: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════ CALCULATOR ═══════════ */
+#calculator {
+  width: 100%;
+  height: 100%;
+  max-width: 430px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+#display {
+  padding: 10px 20px 6px;
+  text-align: right;
+  flex-shrink: 0;
+}
+#expr {
+  color: #888;
+  font-size: clamp(14px, 4vw, 20px);
+  min-height: 22px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 2px;
+}
+#result {
+  color: #fff;
+  font-size: clamp(44px, 13vw, 70px);
+  font-weight: 300;
+  line-height: 1.05;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.btn-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(8px, 2.5vw, 13px);
+  padding: clamp(8px, 2vw, 12px);
+  flex-shrink: 0;
+}
+
+.btn {
+  border: none;
+  border-radius: 50%;
+  width: 100%;
+  aspect-ratio: 1;
+  font-size: clamp(18px, 5.5vw, 26px);
+  font-weight: 400;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: filter 0.08s;
+  /* Critical for mobile: prevent any text selection / callout */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.btn:active, .btn.tap { filter: brightness(1.4); }
+.btn-func { background: #a5a5a5; color: #000; }
+.btn-op   { background: #ff9f0a; color: #fff; }
+.btn-num  { background: #333335; color: #fff; }
+.btn-zero {
+  background: #333335; color: #fff;
+  border-radius: 100px;
+  grid-column: span 2;
+  aspect-ratio: unset;
+  height: clamp(52px, 14vw, 76px);
+  justify-content: flex-start;
+  padding-left: clamp(20px, 6.5vw, 30px);
+}
+
+/* ═══════════ PIN ═══════════ */
+#pinOverlay {
+  display: none; position: fixed; inset: 0; background: #000;
+  z-index: 999; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(14px, 4vh, 26px);
+  padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 20px);
+}
+#pinOverlay.open { display: flex; }
+#pinOverlay h2 { color: #fff; font-size: clamp(18px, 5vw, 24px); font-weight: 500; }
+
+.pin-dots { display: flex; gap: 18px; }
+.pin-dot {
+  width: clamp(12px, 3.5vw, 16px); height: clamp(12px, 3.5vw, 16px);
+  border-radius: 50%; border: 2px solid #555; background: transparent;
+  transition: background .15s;
+}
+.pin-dot.filled { background: #ff9f0a; border-color: #ff9f0a; }
+
+.pin-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: clamp(10px, 3vw, 16px);
+  width: clamp(240px, 72vw, 290px);
+}
+.pin-btn {
+  aspect-ratio: 1; border-radius: 50%; border: none;
+  background: #1c1c1c; color: #fff;
+  font-size: clamp(22px, 6.5vw, 30px);
+  cursor: pointer; touch-action: manipulation;
+  -webkit-appearance: none; appearance: none;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; transition: filter 0.08s;
+}
+.pin-btn:active, .pin-btn.tap { filter: brightness(1.5); }
+.pin-btn.del { font-size: clamp(18px, 5vw, 22px); background: none; }
+#pinError { color: #ff453a; font-size: 14px; min-height: 20px; text-align: center; }
+
+/* ═══════════ VAULT ═══════════ */
+#vault {
+  display: none; position: fixed; inset: 0;
+  background: #000; flex-direction: column; z-index: 100;
+}
+#vault.open { display: flex; }
+
+.vault-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px 12px;
+  background: #111; flex-shrink: 0;
+}
+.vault-header h1 { color: #fff; font-size: clamp(18px, 5.5vw, 26px); font-weight: 700; }
+
+.vault-tabs { display: flex; gap: 6px; }
+.tab {
+  padding: 7px 13px; border-radius: 20px; border: none;
+  background: #222; color: #888;
+  font-size: clamp(11px, 3.2vw, 14px);
+  cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
+  white-space: nowrap; transition: background .2s, color .2s;
+}
+.tab.active { background: #ff9f0a; color: #fff; }
+
+.vault-toolbar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #111; border-bottom: 1px solid #222; flex-shrink: 0;
+}
+.toolbar-btn {
+  padding: 9px 14px; border-radius: 10px; border: none;
+  background: #222; color: #fff;
+  font-size: clamp(12px, 3.5vw, 13px);
+  cursor: pointer; touch-action: manipulation; -webkit-appearance: none;
+  white-space: nowrap; min-height: 42px;
+  display: flex; align-items: center; gap: 5px;
+  transition: background .12s;
+}
+.toolbar-btn:active { background: #444; }
+.toolbar-btn.danger { color: #ff453a; }
+.toolbar-btn.danger:active { background: #2a1a1a; }
+.toolbar-btn.active-mode { background: #ff9f0a; color: #fff; }
+
+#lockBtn {
+  background: none; border: none; color: #ff9f0a; font-size: 22px;
+  cursor: pointer; touch-action: manipulation;
+  min-width: 44px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.vault-content {
+  flex: 1; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 12px; background: #000;
+}
+
+/* ═══════════ MEDIA GRID ═══════════ */
+.media-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+}
+@media (min-width: 500px) {
+  .media-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+.media-item {
+  position: relative; aspect-ratio: 1;
+  background: #1a1a1a; border-radius: 6px; overflow: hidden;
+  cursor: pointer; border: 2.5px solid transparent;
+  transition: border-color .12s; touch-action: manipulation;
+}
+.media-item.selected { border-color: #ff9f0a; }
+.media-item img, .media-item video {
+  width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block;
+}
+.media-item .check {
+  display: none; position: absolute; top: 5px; right: 5px;
+  width: 22px; height: 22px; background: #ff9f0a; border-radius: 50%;
+  align-items: center; justify-content: center;
+  font-size: 12px; color: #fff; pointer-events: none;
+}
+.media-item.selected .check { display: flex; }
+.media-item .type-badge {
+  position: absolute; bottom: 4px; left: 4px;
+  background: rgba(0,0,0,.65); border-radius: 4px;
+  padding: 2px 5px; font-size: 10px; color: #fff; pointer-events: none;
+}
+
+/* ═══════════ NOTES ═══════════ */
+.note-list { display: flex; flex-direction: column; gap: 10px; }
+.note-card {
+  background: #1a1a1a; border-radius: 14px; padding: 14px;
+  cursor: pointer; border: 2px solid transparent;
+  transition: border-color .12s; touch-action: manipulation;
+}
+.note-card.selected { border-color: #ff9f0a; }
+.note-card h3 { color: #fff; font-size: 16px; margin-bottom: 4px; }
+.note-card p  { color: #666; font-size: 13px; line-height: 1.5; white-space: pre-wrap; max-height: 56px; overflow: hidden; }
+.note-card .meta { color: #555; font-size: 11px; margin-top: 8px; }
+
+/* ═══════════ NOTE EDITOR ═══════════ */
+#noteEditor {
+  display: none; position: fixed; inset: 0; background: #111;
+  z-index: 200; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+#noteEditor.open { display: flex; }
+.editor-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px 12px;
+  background: #111; border-bottom: 1px solid #222; flex-shrink: 0;
+}
+.editor-header button {
+  background: none; border: none; color: #ff9f0a; font-size: 17px;
+  cursor: pointer; touch-action: manipulation; white-space: nowrap;
+  min-height: 44px; padding: 0 4px;
+}
+#noteTitle {
+  flex: 1; background: none; border: none; color: #fff;
+  font-size: 18px; font-weight: 700; outline: none;
+}
+#noteBody {
+  flex: 1; background: #111; border: none; color: #ccc;
+  font-size: 16px; padding: 16px; resize: none; outline: none;
+  line-height: 1.7; -webkit-overflow-scrolling: touch;
+}
+
+/* ═══════════ LIGHTBOX ═══════════ */
+#lightbox {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.96); z-index: 300;
+  align-items: center; justify-content: center;
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+           env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+}
+#lightbox.open { display: flex; }
+#lightbox img, #lightbox video {
+  max-width: 95vw; max-height: 82vh; border-radius: 10px; object-fit: contain;
+}
+.lb-close {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 16px;
+  background: rgba(255,255,255,.18); border: none; color: #fff;
+  font-size: 20px; width: 44px; height: 44px; border-radius: 50%;
+  cursor: pointer; touch-action: manipulation;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ═══════════ EMPTY ═══════════ */
+.empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 260px; color: #444; gap: 12px; font-size: 44px;
+}
+.empty p { font-size: 15px; }
+
+/* ═══════════ CONFIRM MODAL ═══════════ */
+#confirmModal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); z-index: 700;
+  align-items: center; justify-content: center; padding: 20px;
+}
+#confirmModal.open { display: flex; }
+.confirm-box {
+  background: #1c1c1e; border-radius: 18px;
+  padding: 24px 20px 16px; width: 100%; max-width: 300px; text-align: center;
+}
+.confirm-box h3 { color: #fff; font-size: 17px; margin-bottom: 8px; }
+.confirm-box p  { color: #888; font-size: 14px; margin-bottom: 20px; }
+.confirm-actions { display: flex; gap: 10px; }
+.confirm-actions button {
+  flex: 1; padding: 13px; border-radius: 12px; border: none;
+  font-size: 16px; cursor: pointer; touch-action: manipulation; min-height: 46px;
+}
+#confirmCancel { background: #2a2a2a; color: #fff; }
+#confirmOk { background: #ff453a; color: #fff; font-weight: 600; }
+
+/* ═══════════ CONTEXT MENU ═══════════ */
+#ctxMenu {
+  display: none; position: fixed; background: #2a2a2a;
+  border-radius: 14px; padding: 6px; z-index: 600;
+  min-width: 170px; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+}
+#ctxMenu.open { display: block; }
+.ctx-item {
+  padding: 12px 14px; color: #fff; font-size: 15px;
+  border-radius: 8px; cursor: pointer; touch-action: manipulation;
+  display: flex; align-items: center; gap: 10px; min-height: 44px;
+}
+.ctx-item:active { background: #3a3a3a; }
+.ctx-item.danger { color: #ff453a; }
+.ctx-divider { height: 1px; background: #3a3a3a; margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<!-- CALCULATOR -->
+<div id="calculator">
+  <div id="display">
+    <div id="expr"></div>
+    <div id="result">0</div>
+  </div>
+  <div class="btn-grid">
+    <button class="btn btn-func" data-a="clear">AC</button>
+    <button class="btn btn-func" data-a="sign">+/−</button>
+    <button class="btn btn-func" data-a="pct">%</button>
+    <button class="btn btn-op"   data-a="op" data-v="÷">÷</button>
+    <button class="btn btn-num"  data-a="num" data-v="7">7</button>
+    <button class="btn btn-num"  data-a="num" data-v="8">8</button>
+    <button class="btn btn-num"  data-a="num" data-v="9">9</button>
+    <button class="btn btn-op"   data-a="op"  data-v="×">×</button>
+    <button class="btn btn-num"  data-a="num" data-v="4">4</button>
+    <button class="btn btn-num"  data-a="num" data-v="5">5</button>
+    <button class="btn btn-num"  data-a="num" data-v="6">6</button>
+    <button class="btn btn-op"   data-a="op"  data-v="−">−</button>
+    <button class="btn btn-num"  data-a="num" data-v="1">1</button>
+    <button class="btn btn-num"  data-a="num" data-v="2">2</button>
+    <button class="btn btn-num"  data-a="num" data-v="3">3</button>
+    <button class="btn btn-op"   data-a="op"  data-v="+">+</button>
+    <button class="btn btn-zero" data-a="num" data-v="0">0</button>
+    <button class="btn btn-num"  data-a="dot">.</button>
+    <button class="btn btn-op"   data-a="eq">=</button>
+  </div>
+</div>
+
+<!-- PIN -->
+<div id="pinOverlay">
+  <h2>Enter Passcode</h2>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div id="pinError"></div>
+  <div class="pin-grid">
+    <button class="pin-btn" data-n="1">1</button>
+    <button class="pin-btn" data-n="2">2</button>
+    <button class="pin-btn" data-n="3">3</button>
+    <button class="pin-btn" data-n="4">4</button>
+    <button class="pin-btn" data-n="5">5</button>
+    <button class="pin-btn" data-n="6">6</button>
+    <button class="pin-btn" data-n="7">7</button>
+    <button class="pin-btn" data-n="8">8</button>
+    <button class="pin-btn" data-n="9">9</button>
+    <button class="pin-btn" style="visibility:hidden"></button>
+    <button class="pin-btn" data-n="0">0</button>
+    <button class="pin-btn del" data-n="del">⌫</button>
+  </div>
+</div>
+
+<!-- VAULT -->
+<div id="vault">
+  <div class="vault-header">
+    <h1>Vault</h1>
+    <div class="vault-tabs">
+      <button class="tab active" data-tab="photos">Photos</button>
+      <button class="tab" data-tab="videos">Videos</button>
+      <button class="tab" data-tab="notes">Notes</button>
+    </div>
+    <button id="lockBtn">🔒</button>
+  </div>
+  <div class="vault-toolbar">
+    <button class="toolbar-btn" id="addBtn">＋ Add</button>
+    <button class="toolbar-btn" id="selBtn">☑ Select</button>
+    <button class="toolbar-btn danger" id="delBtn" style="display:none">🗑 Delete</button>
+    <button class="toolbar-btn" id="selAllBtn" style="display:none">All</button>
+  </div>
+  <div class="vault-content" id="vaultContent"></div>
+</div>
+
+<!-- NOTE EDITOR -->
+<div id="noteEditor">
+  <div class="editor-header">
+    <button id="noteSave">‹ Done</button>
+    <input id="noteTitle" type="text" placeholder="Title" autocomplete="off">
+  </div>
+  <textarea id="noteBody" placeholder="Start typing…"></textarea>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <button class="lb-close" id="lbClose">✕</button>
+  <img id="lbImg" src="" alt="" style="display:none">
+  <video id="lbVid" src="" controls playsinline style="display:none"></video>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirmModal">
+  <div class="confirm-box">
+    <h3>Confirm Delete</h3>
+    <p id="confirmMsg">Are you sure?</p>
+    <div class="confirm-actions">
+      <button id="confirmCancel">Cancel</button>
+      <button id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctxMenu">
+  <div class="ctx-item" id="ctxSelect">☑ Select</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" id="ctxDelete">🗑 Delete</div>
+</div>
+
+<!-- FILE INPUTS -->
+<input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+<input type="file" id="videoInput" accept="video/*" multiple style="display:none">
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════
+   UNIVERSAL TAP HANDLER
+   Works on both mobile (touchend) and desktop (click).
+   Using touchend + preventDefault stops the 300ms delay
+   and the ghost click that fires after it on mobile.
+═══════════════════════════════════════ */
+function onTap(el, fn) {
+  let startX, startY, moved;
+  el.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    moved = false;
+  }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (Math.abs(e.touches[0].clientX - startX) > 10 ||
+        Math.abs(e.touches[0].clientY - startY) > 10) moved = true;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (moved) return;
+    e.preventDefault(); // blocks the ghost click
+    fn(e);
+  }, { passive: false });
+  // Desktop fallback
+  el.addEventListener('click', fn);
+}
+
+/* Long-press helper */
+function onLongPress(el, fn) {
+  let timer, sx, sy, moved;
+  el.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; moved = false;
+    timer = setTimeout(() => { if (!moved) fn(e.touches[0].clientX, e.touches[0].clientY); }, 500);
+  }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (Math.abs(e.touches[0].clientX - sx) > 10 || Math.abs(e.touches[0].clientY - sy) > 10) {
+      moved = true; clearTimeout(timer);
+    }
+  }, { passive: true });
+  el.addEventListener('touchend',    () => clearTimeout(timer));
+  el.addEventListener('touchcancel', () => clearTimeout(timer));
+  el.addEventListener('contextmenu', e => { e.preventDefault(); fn(e.clientX, e.clientY); });
+}
+
+/* ═══════════════════════════════════════
+   INDEXEDDB
+═══════════════════════════════════════ */
+const DB_NAME = 'vaultDB', DB_VER = 1;
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      ['photos','videos','notes'].forEach(s => {
+        if (!d.objectStoreNames.contains(s))
+          d.createObjectStore(s, { keyPath:'id', autoIncrement:true });
+      });
+    };
+    req.onsuccess = e => { db = e.target.result; res(); };
+    req.onerror   = e => rej(e);
+  });
+}
+const tx     = (s, m, fn) => new Promise((res, rej) => { const r = fn(db.transaction(s,m).objectStore(s)); r.onsuccess = () => res(r.result); r.onerror = e => rej(e); });
+const getAll = s      => tx(s, 'readonly',  os => os.getAll());
+const add    = (s, o) => tx(s, 'readwrite', os => os.add(o));
+const del    = (s, id)=> tx(s, 'readwrite', os => os.delete(id));
+const put    = (s, o) => tx(s, 'readwrite', os => os.put(o));
+
+/* ═══════════════════════════════════════
+   CALCULATOR
+═══════════════════════════════════════ */
+const $result = document.getElementById('result');
+const $expr   = document.getElementById('expr');
+let S = { disp:'0', expr:'', prev:null, op:null, waiting:false, evaled:false };
+const SECRET = '2013';
+let buf = '';
+
+function calc(action, val) {
+  if (action === 'num') {
+    if (S.waiting) { S.disp = val === '0' ? '0' : val; S.waiting = false; }
+    else S.disp = S.disp === '0' ? val : S.disp.length < 12 ? S.disp + val : S.disp;
+    if (S.evaled) { S.expr = ''; S.evaled = false; }
+    buf += val;
+    if (buf.length > SECRET.length) buf = buf.slice(-SECRET.length);
+    if (buf === SECRET) { openVault(); return; }
+  }
+  if (action === 'dot') {
+    if (S.waiting) { S.disp = '0.'; S.waiting = false; draw(); return; }
+    if (!S.disp.includes('.')) S.disp += '.';
+  }
+  if (action === 'clear')  { S.disp='0'; S.expr=''; S.prev=null; S.op=null; S.waiting=false; S.evaled=false; }
+  if (action === 'sign')   S.disp = String(-parseFloat(S.disp));
+  if (action === 'pct')    S.disp = String(parseFloat(S.disp) / 100);
+  if (action === 'op') {
+    const c = parseFloat(S.disp);
+    if (S.op && !S.waiting) { const r = run(S.prev, S.op, c); S.disp = fmt(r); S.prev = r; }
+    else S.prev = c;
+    S.op = val; S.expr = fmt(S.prev) + ' ' + val; S.waiting = true; S.evaled = false;
+  }
+  if (action === 'eq') {
+    if (!S.op) return;
+    const c = parseFloat(S.disp), r = run(S.prev, S.op, c);
+    S.expr = fmt(S.prev) + ' ' + S.op + ' ' + fmt(c) + ' =';
+    S.disp = fmt(r); S.prev = null; S.op = null; S.waiting = false; S.evaled = true;
+  }
+  draw();
+}
+const run = (a, op, b) => op==='+'?a+b : op==='−'?a-b : op==='×'?a*b : b?a/b:0;
+const fmt = n => { if (n===null||isNaN(n)) return '0'; const s=String(n); return s.length>12?parseFloat(n.toPrecision(8)).toString():s; };
+const draw = () => { $result.textContent = S.disp; $expr.textContent = S.expr; };
+
+/* Wire up calc buttons */
+document.querySelectorAll('.btn').forEach(btn => {
+  onTap(btn, () => {
+    const a = btn.dataset.a, v = btn.dataset.v;
+    calc(a, v);
+  });
+});
+
+/* ═══════════════════════════════════════
+   PIN
+═══════════════════════════════════════ */
+const $pin   = document.getElementById('pinOverlay');
+const $perr  = document.getElementById('pinError');
+let pinEntry = '';
+
+const dotEl = i => document.getElementById('d' + i);
+const updateDots = () => { for (let i=0;i<4;i++) dotEl(i).classList.toggle('filled', i < pinEntry.length); };
+
+function showPin() { pinEntry = ''; $perr.textContent = ''; updateDots(); $pin.classList.add('open'); }
+
+document.querySelectorAll('.pin-btn').forEach(btn => {
+  onTap(btn, () => {
+    const n = btn.dataset.n;
+    if (n === 'del') pinEntry = pinEntry.slice(0, -1);
+    else { if (pinEntry.length >= 4) return; pinEntry += n; }
+    updateDots(); $perr.textContent = '';
+    if (pinEntry.length === 4) verifyPin();
+  });
+});
+
+function verifyPin() {
+  if (pinEntry === SECRET) {
+    $pin.classList.remove('open');
+    document.getElementById('vault').classList.add('open');
+    loadTab(currentTab);
+  } else { $perr.textContent = 'Incorrect passcode'; pinEntry = ''; updateDots(); }
+}
+function openVault() { showPin(); }
+
+/* ═══════════════════════════════════════
+   CONFIRM MODAL
+═══════════════════════════════════════ */
+function confirm(msg) {
+  return new Promise(res => {
+    document.getElementById('confirmMsg').textContent = msg;
+    const modal = document.getElementById('confirmModal');
+    modal.classList.add('open');
+    const ok  = document.getElementById('confirmOk');
+    const can = document.getElementById('confirmCancel');
+    const done = val => { modal.classList.remove('open'); ok.removeEventListener('click', yes); can.removeEventListener('click', no); res(val); };
+    const yes = () => done(true), no = () => done(false);
+    ok.addEventListener('click', yes); can.addEventListener('click', no);
+  });
+}
+
+/* ═══════════════════════════════════════
+   CONTEXT MENU
+═══════════════════════════════════════ */
+const $ctx = document.getElementById('ctxMenu');
+let ctxId = null, ctxEl = null, ctxTab = null;
+
+function showCtx(x, y, id, el) {
+  ctxId = id; ctxEl = el; ctxTab = currentTab;
+  $ctx.style.left = Math.min(x, innerWidth  - 185) + 'px';
+  $ctx.style.top  = Math.min(y, innerHeight - 115) + 'px';
+  $ctx.classList.add('open');
+}
+function hideCtx() { $ctx.classList.remove('open'); ctxId = null; ctxEl = null; ctxTab = null; }
+
+document.addEventListener('touchstart', e => { if (!$ctx.contains(e.target)) hideCtx(); }, { passive: true });
+document.addEventListener('click',      e => { if (!$ctx.contains(e.target)) hideCtx(); });
+
+onTap(document.getElementById('ctxSelect'), () => {
+  if (ctxId !== null) { enterSel(); toggleSel(ctxId, ctxEl); }
+  hideCtx();
+});
+
+onTap(document.getElementById('ctxDelete'), async () => {
+  const id = ctxId, tab = ctxTab; hideCtx();
+  if (id === null) return;
+  if (await confirm('Delete this item?')) { await del(tab, id); loadTab(tab); }
+});
+
+/* ═══════════════════════════════════════
+   VAULT
+═══════════════════════════════════════ */
+let currentTab = 'photos';
+let selected   = new Set();
+let selMode    = false;
+
+document.querySelectorAll('.tab').forEach(t => {
+  onTap(t, () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentTab = t.dataset.tab;
+    selected.clear(); selMode = false; updateSelBtn(); updateBar(); loadTab(currentTab);
+  });
+});
+
+async function loadTab(tab) {
+  const el = document.getElementById('vaultContent');
+  if (tab === 'notes') { renderNotes(); return; }
+  const items = await getAll(tab);
+  if (!items.length) { el.innerHTML = `<div class="empty">${tab==='photos'?'🖼️':'🎬'}<p>No ${tab} yet</p></div>`; return; }
+  el.innerHTML = '<div class="media-grid" id="grid"></div>';
+  const grid = document.getElementById('grid');
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'media-item' + (selected.has(item.id) ? ' selected' : '');
+    if (tab === 'photos') {
+      const img = document.createElement('img'); img.src = item.dataURL; img.loading = 'lazy'; div.appendChild(img);
+    } else {
+      const vid = document.createElement('video'); vid.src = item.dataURL; vid.preload = 'metadata'; div.appendChild(vid);
+      const b = document.createElement('span'); b.className = 'type-badge'; b.textContent = '▶'; div.appendChild(b);
+    }
+    const chk = document.createElement('span'); chk.className = 'check'; chk.textContent = '✓'; div.appendChild(chk);
+
+    onLongPress(div, (x, y) => showCtx(x, y, item.id, div));
+    onTap(div, () => {
+      if ($ctx.classList.contains('open')) return;
+      if (selMode) toggleSel(item.id, div);
+      else openLight(tab, item);
+    });
+    grid.appendChild(div);
+  });
+}
+
+function enterSel()         { selMode = true; updateSelBtn(); updateBar(); }
+function toggleSel(id, el)  {
+  if (selected.has(id)) { selected.delete(id); el.classList.remove('selected'); }
+  else                  { selected.add(id);    el.classList.add('selected'); }
+  updateBar();
+}
+function updateSelBtn() {
+  const b = document.getElementById('selBtn');
+  b.textContent = selMode ? '✓ Done' : '☑ Select';
+  b.classList.toggle('active-mode', selMode);
+}
+function updateBar() {
+  document.getElementById('delBtn').style.display    = selected.size > 0 ? '' : 'none';
+  document.getElementById('selAllBtn').style.display = selMode && currentTab !== 'notes' ? '' : 'none';
+}
+
+onTap(document.getElementById('selBtn'), () => {
+  selMode = !selMode;
+  if (!selMode) { selected.clear(); loadTab(currentTab); }
+  updateSelBtn(); updateBar();
+});
+
+onTap(document.getElementById('lockBtn'), () => {
+  document.getElementById('vault').classList.remove('open');
+  selected.clear(); selMode = false; updateSelBtn(); updateBar();
+});
+
+onTap(document.getElementById('addBtn'), () => {
+  if      (currentTab === 'photos') document.getElementById('photoInput').click();
+  else if (currentTab === 'videos') document.getElementById('videoInput').click();
+  else    editNote(null);
+});
+
+const readF = f => new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(f); });
+
+document.getElementById('photoInput').addEventListener('change', async e => {
+  for (const f of e.target.files) await add('photos', { dataURL: await readF(f), name: f.name, date: Date.now() });
+  e.target.value = ''; loadTab('photos');
+});
+document.getElementById('videoInput').addEventListener('change', async e => {
+  for (const f of e.target.files) await add('videos', { dataURL: await readF(f), name: f.name, date: Date.now() });
+  e.target.value = ''; loadTab('videos');
+});
+
+onTap(document.getElementById('delBtn'), async () => {
+  if (!selected.size) return;
+  if (!await confirm(`Delete ${selected.size} item${selected.size > 1 ? 's' : ''}?`)) return;
+  for (const id of selected) await del(currentTab, id);
+  selected.clear(); selMode = false; updateSelBtn(); updateBar(); loadTab(currentTab);
+});
+
+onTap(document.getElementById('selAllBtn'), async () => {
+  const items = await getAll(currentTab);
+  items.forEach(i => selected.add(i.id)); loadTab(currentTab); updateBar();
+});
+
+/* ═══════════════════════════════════════
+   LIGHTBOX
+═══════════════════════════════════════ */
+const $lb  = document.getElementById('lightbox');
+const $img = document.getElementById('lbImg');
+const $vid = document.getElementById('lbVid');
+
+function openLight(type, item) {
+  if (type === 'photos') { $img.src = item.dataURL; $img.style.display = ''; $vid.style.display = 'none'; }
+  else                   { $vid.src = item.dataURL; $vid.style.display = ''; $img.style.display = 'none'; }
+  $lb.classList.add('open');
+}
+onTap(document.getElementById('lbClose'), () => { $lb.classList.remove('open'); $vid.pause(); });
+
+/* ═══════════════════════════════════════
+   NOTES
+═══════════════════════════════════════ */
+async function renderNotes() {
+  const el = document.getElementById('vaultContent');
+  const notes = await getAll('notes');
+  if (!notes.length) { el.innerHTML = '<div class="empty">📝<p>No notes yet</p></div>'; return; }
+  el.innerHTML = '<div class="note-list" id="noteList"></div>';
+  const list = document.getElementById('noteList');
+  notes.sort((a, b) => b.date - a.date).forEach(note => {
+    const div = document.createElement('div');
+    div.className = 'note-card' + (selected.has(note.id) ? ' selected' : '');
+    div.innerHTML = `<h3>${esc(note.title||'Untitled')}</h3><p>${esc(note.body||'')}</p><div class="meta">${new Date(note.date).toLocaleDateString()}</div>`;
+    onLongPress(div, (x, y) => showCtx(x, y, note.id, div));
+    onTap(div, () => {
+      if ($ctx.classList.contains('open')) return;
+      if (selMode) toggleSel(note.id, div);
+      else editNote(note);
+    });
+    list.appendChild(div);
+  });
+}
+
+let editingNote = null;
+function editNote(note) {
+  editingNote = note;
+  document.getElementById('noteTitle').value = note ? note.title : '';
+  document.getElementById('noteBody').value  = note ? note.body  : '';
+  document.getElementById('noteEditor').classList.add('open');
+}
+onTap(document.getElementById('noteSave'), async () => {
+  const title = document.getElementById('noteTitle').value.trim() || 'Untitled';
+  const body  = document.getElementById('noteBody').value;
+  if (editingNote) await put('notes', { ...editingNote, title, body, date: Date.now() });
+  else             await add('notes', { title, body, date: Date.now() });
+  document.getElementById('noteEditor').classList.remove('open');
+  renderNotes();
+});
+
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ═══════════════════════════════════════
+   BOOT
+═══════════════════════════════════════ */
+openDB().then(() => console.log('Ready'));
+</script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
